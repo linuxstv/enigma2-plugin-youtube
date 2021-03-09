@@ -118,23 +118,34 @@ def test_playlist():
 	CheckExample(q='vevo', eventType='', order='relevance', s_type='playlist', descr='Playlist')
 
 
-_TESTS = [{'Id': 'BaW_jenozKc', 'Description': 'Ue the first video ID in the URL'},
-		{'Id': 'a9LDPn-MO4I', 'Description': '256k DASH audio (format 141) via DASH manifest'},
-		{'Id': 'T4XJQO3qol8', 'Description': 'Controversy video'},
-		{'Id': '__2ABJjxzNo', 'Description': 'YouTube Red ad is not captured for creator'},
-		{'Id': 'FIl7x6_3R5Y', 'Description': 'Extraction from multiple DASH manifests'},
-		{'Id': 'lsguqyKfVQg', 'Description': 'Title with JS-like syntax'},
-		{'Id': 'M4gD1WSo5mA', 'Description': 'Video licensed under Creative Commons'},
-		{'Id': 'eQcmzGIKrzg', 'Description': 'Channel-like uploader_url'},
-		{'Id': 'uGpuVWrhIzE', 'Description': 'Rental video preview'},
-		{'Id': 'iqKdEhx-dD4', 'Description': 'YouTube Red video with episode data'},
-		{'Id': 'MgNrAu2pzNs', 'Description': 'Youtube Music Auto-generated description'}]
+video_id = ['BaW_jenozKc',
+		'YQHsXMglC9A',
+		'a9LDPn-MO4I',
+		'T4XJQO3qol8',
+		'__2ABJjxzNo',
+		'FIl7x6_3R5Y',
+		'lsguqyKfVQg',
+		'M4gD1WSo5mA',
+		'eQcmzGIKrzg',
+		'uGpuVWrhIzE',
+		'iqKdEhx-dD4',
+		'MgNrAu2pzNs']
 
 
-@pytest.fixture(params=_TESTS)
-def video_data(request):
-	return request.param
+video_descr = ['Use the first video ID',
+		'DASH mp4 video and audio',
+		'256k DASH audio via manifest',
+		'Controversy video',
+		'Ad is not captured for creator',
+		'Multiple DASH manifests',
+		'Title with JS-like syntax',
+		'Licensed under Creative Commons',
+		'Channel-like uploader_url',
+		'Rental video preview',
+		'YouTube Red with episode data',
+		'Auto generated description']
 
 
-def test_videoUrls(video_data):
-	CheckVideoUrl(videos=video_data['Id'], descr=video_data['Description'])
+@pytest.mark.parametrize('descr', video_descr)
+def test_url(descr):
+	CheckVideoUrl(videos=video_id[video_descr.index(descr)], descr=descr)

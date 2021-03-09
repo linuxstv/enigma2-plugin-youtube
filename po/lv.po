@@ -2,7 +2,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: tuxbox-enigma 0.0.1\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2021-02-03 19:50+0200\n"
+"POT-Creation-Date: 2021-02-20 19:52+0200\n"
 "PO-Revision-Date: 2015-06-25 00:44+0300\n"
 "Last-Translator: Tapat <taapat@gmail.com>\n"
 "Language-Team: Taapat <taapat@gmail.com>\n"
@@ -43,7 +43,7 @@ msgstr "Alfabētiski"
 msgid "Ask user"
 msgstr "Jautāt"
 
-msgid "By ativity"
+msgid "By activity"
 msgstr "Pēc aktivitātes"
 
 msgid "By relevance"
@@ -199,7 +199,7 @@ msgstr "Nē"
 msgid "No, but play video again"
 msgstr "Nē, atskaņot video vēlreiz"
 
-msgid "Ok"
+msgid "OK"
 msgstr "Ok"
 
 msgid "Open"
@@ -342,6 +342,13 @@ msgstr "Kārtot meklēšnas rezultātus pēc:"
 msgid "Sort subscriptions:"
 msgstr "Kārtot abonementus:"
 
+msgid ""
+"Specify or you want to use DASH MP4 format streams if available.\n"
+"This requires playing two streams together and may cause problems for some receivers."
+msgstr ""
+"Norādiet vai vēlaties izmantot DASH MP4 formātu ja tāds pieejams.\n"
+"Lai to izmantotu ir jāatskaņo divas straumes paralēli un dažos uztvērējos tas var nestrādāt."
+
 msgid "Specify the directory where save downloaded video files."
 msgstr "Norādiet mapi kurā saglabāt lejupielādētos video failus."
 
@@ -414,6 +421,9 @@ msgstr "Augšupielādētie"
 
 msgid "Use"
 msgstr "Lietot"
+
+msgid "Use DASH MP4 format:"
+msgstr "Izmantot DASH MP4 formātu:"
 
 msgid "Video download started!"
 msgstr "Video lejupielāde uzsākta!"

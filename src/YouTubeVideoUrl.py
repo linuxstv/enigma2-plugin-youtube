@@ -6,7 +6,6 @@ from __future__ import print_function
 import re
 
 from json import loads
-from random import randint
 
 from Components.config import config
 
@@ -96,6 +95,7 @@ class YouTubeVideoUrl():
 	def __init__(self):
 		self._code_cache = {}
 		self._player_cache = {}
+		self.use_dash_mp4 = []
 
 	def _download_webpage(self, url, query={}):
 		""" Return the data of the page as a string """
@@ -196,10 +196,10 @@ class YouTubeVideoUrl():
 		""" Return a string representation of a signature """
 		return '.'.join(compat_str(len(part)) for part in example_sig.split('.'))
 
-	@staticmethod
-	def _extract_player_info(player_url):
+	def _extract_signature_function(self, player_url):
 		_PLAYER_INFO_RE = (
-			r'/(?P<id>[a-zA-Z0-9_-]{8,})/player_ias\.vflset(?:/[a-zA-Z]{2,3}_[a-zA-Z]{2,3})?/base\.js$',
+			r'/s/player/(?P<id>[a-zA-Z0-9_-]{8,})/player',
+			r'/(?P<id>[a-zA-Z0-9_-]{8,})/player(?:_ias\.vflset(?:/[a-zA-Z]{2,3}_[a-zA-Z]{2,3})?|-plasma-ias-(?:phone|tablet)-[a-z]{2}_[A-Z]{2}\.vflset)/base\.js$',
 			r'\b(?P<id>vfl[a-zA-Z0-9_-]+)\b.*?\.js$',
 		)
 
@@ -209,20 +209,19 @@ class YouTubeVideoUrl():
 				break
 		else:
 			raise Exception('Cannot identify player %r' % player_url)
-		return id_m.group('id')
 
-	def _extract_signature_function(self, player_url):
-		player_id = self._extract_player_info(player_url)
+		player_id = id_m.group('id')
 
 		if player_id not in self._code_cache:
 			self._code_cache[player_id] = self._download_webpage(player_url)
-		code = self._code_cache[player_id]
-		return self._parse_sig_js(code)
+		jscode = self._code_cache[player_id]
 
-	def _parse_sig_js(self, jscode):
 		funcname = self._search_regex(
 				(r'\b[cs]\s*&&\s*[adf]\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(',
 				r'\b[a-zA-Z0-9]+\s*&&\s*[a-zA-Z0-9]+\.set\([^,]+\s*,\s*encodeURIComponent\s*\(\s*(?P<sig>[a-zA-Z0-9$]+)\(',
+				r'\bm=(?P<sig>[a-zA-Z0-9$]{2})\(decodeURIComponent\(h\.s\)\)',
+				r'\bc&&\(c=(?P<sig>[a-zA-Z0-9$]{2})\(decodeURIComponent\(c\)\)',
+				r'(?:\b|[^a-zA-Z0-9$])(?P<sig>[a-zA-Z0-9$]{2})\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\);[a-zA-Z0-9$]{2}\.[a-zA-Z0-9$]{2}\(a,\d+\)',
 				r'(?:\b|[^a-zA-Z0-9$])(?P<sig>[a-zA-Z0-9$]{2})\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)',
 				r'(?P<sig>[a-zA-Z0-9$]+)\s*=\s*function\(\s*a\s*\)\s*{\s*a\s*=\s*a\.split\(\s*""\s*\)',
 				# Obsolete patterns
@@ -254,29 +253,6 @@ class YouTubeVideoUrl():
 			url_map[itag] = format_url
 		return url_map
 
-	def mark_watched(self, player_response):
-		playback_url = url_or_none(try_get(
-			player_response,
-			lambda x: x['playbackTracking']['videostatsPlaybackUrl']['baseUrl']))
-		if not playback_url:
-			return
-		parsed_playback_url = compat_urlparse(playback_url)
-		qs = compat_parse_qs(parsed_playback_url.query)
-
-		# cpn generation algorithm is reverse engineered from base.js.
-		# In fact it works even with dummy cpn.
-		CPN_ALPHABET = 'abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789-_'
-		cpn = ''.join((CPN_ALPHABET[randint(0, 256) & 63] for _ in range(0, 16)))
-
-		qs.update({
-			'ver': ['2'],
-			'cpn': [cpn],
-		})
-		playback_url = compat_urlunparse(
-			parsed_playback_url._replace(query=compat_urlencode(qs, True)))
-
-		self._download_webpage(playback_url)
-
 	@staticmethod
 	def _parse_json(json_string):
 		try:
@@ -307,11 +283,11 @@ class YouTubeVideoUrl():
 			fmt_url += '&%s=%s' % (sp, signature)
 		return fmt_url
 
-	@staticmethod
-	def _not_in_fmt(fmt):
+	def _not_in_fmt(self, fmt):
 		return not (fmt.get('targetDurationSec') or
 				fmt.get('drmFamilies') or
-				fmt.get('type') == 'FORMAT_STREAM_TYPE_OTF')
+				fmt.get('type') == 'FORMAT_STREAM_TYPE_OTF' or
+				str(fmt.get('itag', '')) in self.use_dash_mp4)
 
 	def _extract_fmt_video_format(self, streaming_formats, webpage):
 		""" Find the best format from our format priority map """
@@ -340,7 +316,7 @@ class YouTubeVideoUrl():
 
 	def _real_extract(self, video_id):
 		webpage = self._download_webpage(
-				'https://www.youtube.com/watch?v=%s' % video_id)
+				'https://www.youtube.com/watch?v=%s&bpctr=9999999999' % video_id)
 		if not webpage:
 			raise Exception('Video webpage not found for!')
 
@@ -366,7 +342,7 @@ class YouTubeVideoUrl():
 					self._download_webpage(
 							'https://www.youtube.com/get_video_info',
 							query={'video_id': video_id,
-									'eurl': 'https://www.youtube.com/embed/%s' % video_id})),
+									'eurl': 'https://youtube.googleapis.com/v/%s' % video_id})),
 							lambda x: x['player_response'][0],
 							compat_str) or '{}')
 			if pr:
@@ -382,6 +358,12 @@ class YouTubeVideoUrl():
 			# If priority format changed in config, recreate priority list
 			if PRIORITY_VIDEO_FORMAT[0] != config.plugins.YouTube.maxResolution.value:
 				createPriorityFormats()
+
+			if config.plugins.YouTube.useDashMP4.value:
+				self.use_dash_mp4 = []
+			else:
+				print('[YouTubeVideoUrl] skip DASH MP4 format')
+				self.use_dash_mp4 = DASHMP4_FORMAT
 
 			url, our_format = self._extract_fmt_video_format(streaming_formats, webpage)
 			if url and our_format in DASHMP4_FORMAT:
@@ -435,8 +417,6 @@ class YouTubeVideoUrl():
 					subreason = clean_html(get_text(subreason))
 					reason += '\n%s' % subreason
 			raise Exception(reason)
-
-		self.mark_watched(player_response)
 
 		return str(url)
 
